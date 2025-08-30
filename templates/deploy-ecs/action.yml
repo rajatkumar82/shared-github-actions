@@ -1,0 +1,66 @@
+name: Deploy to ECS
+description: "This will deploy the docker image on ECR to ECS"
+
+inputs:
+  aws-access-key-id:
+    description: "AWS Access Key Id"
+    required: true
+  aws-secret-access-key:
+    description: "AWS Secret Access Key"
+    required: true
+  aws-region:
+    description: "AWS Region"
+    required: true
+  cluster-name:
+    description: "Name of the ECS Cluster"
+    required: true
+  service-name:
+    description: "Name of the EKS Server"
+    required: true
+  task-name:
+    description: "Name of the ECS Task Definition"
+    required: true
+  version:
+    description: "Version"
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Find AppName from repository name
+      shell: bash
+      run: |
+        echo "APP_NAME=${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/}" >> $GITHUB_ENV
+
+    - name: Install jq
+      uses: dcarbone/install-jq-action@v2.1.0
+      with:
+        version: 1.7
+
+    - name: Deploy ECS Service
+      shell: bash
+      env:
+        ECS_CLUSTER: ${{ inputs.cluster-name }}
+        ECS_SERVICE: ${{ inputs.service-name }}
+        ECS_TASK_DEF_NAME: ${{ inputs.task-name }}
+        DB_FULL_IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.APP_NAME }}:db-${{ inputs.version }}
+        SERVER_FULL_IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.APP_NAME }}:server-${{ inputs.version }}
+      run: |
+        TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition "$ECS_TASK_DEF_NAME" --region "$AWS_REGION")
+        NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg DB_IMAGE "$DB_FULL_IMAGE" --arg SERVER_IMAGE "$SERVER_FULL_IMAGE" '.taskDefinition | .containerDefinitions[0].image = $DB_IMAGE | .containerDefinitions[1].image = $SERVER_IMAGE | del(.taskDefinitionArn) | del(.revision) | del(.status) | del(.requiresAttributes) | del(.compatibilities) |  del(.registeredAt)  | del(.registeredBy)')
+        NEW_TASK_INFO=$(aws ecs register-task-definition --region "$AWS_REGION" --cli-input-json "$NEW_TASK_DEFINITION")
+        NEW_REVISION=$(echo $NEW_TASK_INFO | jq '.taskDefinition.revision')
+        aws ecs update-service --cluster ${ECS_CLUSTER} --service ${ECS_SERVICE} --task-definition ${ECS_TASK_DEF_NAME}:${NEW_REVISION}
+        aws ecs wait services-stable --cluster ${ECS_CLUSTER} --services ${ECS_SERVICE}

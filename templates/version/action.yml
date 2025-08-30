@@ -1,0 +1,28 @@
+name: Generate version
+description: Generates a version number based on current version in the pom.xml
+
+outputs:
+  version:
+    description: Generated version number
+    value: ${{steps.version.outputs.version}}
+  tag:
+    description: Generated tag version
+    value: ${{steps.version.outputs.tag}}
+
+runs:
+  using: composite
+  steps:
+    - id: version
+      name: "Version"
+      shell: bash
+      run: |
+        old_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+        
+        new_version=$(echo $old_version | sed 's/-SNAPSHOT/-${{ github.run_number }}/g')
+        echo "Generated version is $new_version"
+
+        tag=$(echo "v$new_version")
+        echo "Generated tag is $tag"
+
+        echo "version=$new_version" >> $GITHUB_OUTPUT
+        echo "tag=$tag" >> $GITHUB_OUTPUT

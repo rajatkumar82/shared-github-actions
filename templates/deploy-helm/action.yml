@@ -1,0 +1,72 @@
+name: Deploy to EKS
+description: "This will deploy the docker image on ECR to EKS"
+
+inputs:
+  aws-access-key-id:
+    description: "AWS Access Key Id"
+    required: true
+  aws-secret-access-key:
+    description: "AWS Secret Access Key"
+    required: true
+  aws-region:
+    description: "AWS Region"
+    required: true
+  eks-cluster:
+    description: "Name of the EKS Cluster"
+    required: true
+  environment:
+    description: "staging/prod environment"
+    required: true
+  image-tag:
+    description: "Version"
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Find AppName from repository name
+      shell: bash
+      run: |
+        echo "APP_NAME=${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/}" >> $GITHUB_ENV
+
+    - name: Get Helm Repo Password
+      shell: bash
+      env:
+        AWS_REGION: ${{ inputs.aws-region }}
+      run: |
+        AWS_ECR_LOGIN_PASSWORD=$(aws ecr get-login-password --region ${AWS_REGION})
+        
+        echo "HELM_REPO_PASSWORD=${AWS_ECR_LOGIN_PASSWORD}" >> $GITHUB_ENV
+
+    - name: Deploy Helm
+      uses: bitovi/github-actions-deploy-eks-helm@v1.2.9
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: ${{ env.APP_NAME }}
+        IMAGE_TAG: ${{ inputs.image-tag }}
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+        cluster-name: ${{ inputs.eks-cluster }}
+        chart-repository: oci://${{ env.ECR_REGISTRY }}/shared-spring-boot-helm-chart
+        chart-path: ""
+        version: 1.0.0
+        username: AWS
+        password: ${{ env.HELM_REPO_PASSWORD }}
+        namespace: default
+        name: ${{ env.APP_NAME }}
+        config-files: ./helm/values.yaml,./helm/values/values-${{ inputs.environment }}.yaml,./helm/values/${{ inputs.environment }}/values-eu.yaml,
+        values: image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }},image.tag=${{ env.IMAGE_TAG }}

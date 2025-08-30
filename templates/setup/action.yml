@@ -1,0 +1,93 @@
+name: Setup
+description: Setup Java, Maven & AWS Credentials
+
+inputs:
+  aws-access-key-id:
+    description: "AWS Access Key Id"
+    required: true
+  aws-secret-access-key:
+    description: "AWS Secret Access Key"
+    required: true
+  aws-region:
+    description: "AWS Region"
+    required: true
+  java-version:
+    description: "JDK Version"
+    required: true
+  maven-version:
+    description: "Apache Maven Version"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Set up JDK ${{ inputs.java-version }}
+      uses: actions/setup-java@v3
+      with:
+        java-version: ${{ inputs.java-version }}
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Setup Maven ${{ inputs.maven-version }}
+      uses: stCarolas/setup-maven@v5
+      with:
+        maven-version: ${{ inputs.maven-version }}
+
+    - name: Download CodeArtifact Auth Token
+      shell: bash
+      run: |
+        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+        echo CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain cab --domain-owner $AWS_ACCOUNT_ID --query authorizationToken --output text) >> $GITHUB_ENV
+        
+        echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
+
+    - name: Generate settings.xml for Maven Builds
+      uses: whelk-io/maven-settings-xml-action@v22
+      with:
+        repositories: >
+          [
+            {
+              "id": "cab-hosted-releases",
+              "name": "cab-hosted-releases",
+              "url": "https://cab-129510261302.d.codeartifact.us-east-1.amazonaws.com/maven/hosted-releases",
+              "releases": {
+                "enabled": "true",
+                "updatePolicy": "never"
+              },
+              "snapshots": {
+                "enabled": "false"
+              }
+            },
+            {
+              "id": "cab-hosted-snapshots",
+              "name": "cab-hosted-snapshots",
+              "url": "https://cab-129510261302.d.codeartifact.us-east-1.amazonaws.com/maven/hosted-snapshots",
+              "releases": {
+                "enabled": "false",
+                "updatePolicy": "never"
+              },
+              "snapshots": {
+                "enabled": "true"
+              }
+            }
+          ]
+        servers: >
+          [
+            {
+              "id": "cab-hosted-snapshots",
+              "username": "aws",
+              "password": "${env.CODEARTIFACT_AUTH_TOKEN}"
+            },
+            {
+              "id": "cab-hosted-releases",
+              "username": "aws",
+              "password": "${env.CODEARTIFACT_AUTH_TOKEN}"
+            }
+          ]
