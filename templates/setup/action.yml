@@ -44,7 +44,7 @@ runs:
       shell: bash
       run: |
         AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-        echo CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain cab --domain-owner $AWS_ACCOUNT_ID --query authorizationToken --output text) >> $GITHUB_ENV
+        echo CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain rkc --domain-owner $AWS_ACCOUNT_ID --query authorizationToken --output text) >> $GITHUB_ENV
         
         echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
 
@@ -54,9 +54,9 @@ runs:
         repositories: >
           [
             {
-              "id": "cab-hosted-releases",
-              "name": "cab-hosted-releases",
-              "url": "https://cab-129510261302.d.codeartifact.us-east-1.amazonaws.com/maven/hosted-releases",
+              "id": "rkc-hosted-releases",
+              "name": "rkc-hosted-releases",
+              "url": "https://rkc-129510261302.d.codeartifact.us-east-1.amazonaws.com/maven/hosted-releases",
               "releases": {
                 "enabled": "true",
                 "updatePolicy": "never"
@@ -66,9 +66,9 @@ runs:
               }
             },
             {
-              "id": "cab-hosted-snapshots",
-              "name": "cab-hosted-snapshots",
-              "url": "https://cab-129510261302.d.codeartifact.us-east-1.amazonaws.com/maven/hosted-snapshots",
+              "id": "rkc-hosted-snapshots",
+              "name": "rkc-hosted-snapshots",
+              "url": "https://rkc-129510261302.d.codeartifact.us-east-1.amazonaws.com/maven/hosted-snapshots",
               "releases": {
                 "enabled": "false",
                 "updatePolicy": "never"
@@ -81,12 +81,12 @@ runs:
         servers: >
           [
             {
-              "id": "cab-hosted-snapshots",
+              "id": "rkc-hosted-snapshots",
               "username": "aws",
               "password": "${env.CODEARTIFACT_AUTH_TOKEN}"
             },
             {
-              "id": "cab-hosted-releases",
+              "id": "rkc-hosted-releases",
               "username": "aws",
               "password": "${env.CODEARTIFACT_AUTH_TOKEN}"
             }
