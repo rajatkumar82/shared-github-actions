@@ -91,7 +91,7 @@ runs:
             {
               "id": "rkc-hosted-snapshots",
               "username": "${{ inputs.JF_USER }}",
-              "password": "${{ inputs.JS_PASSWORD}"
+              "password": "${{ inputs.JS_PASSWORD }}"
             },
             {
               "id": "rkc-hosted-releases",
