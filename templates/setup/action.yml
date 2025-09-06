@@ -90,12 +90,12 @@ runs:
           [
             {
               "id": "rkc-hosted-snapshots",
-              "username": "aws",
-              "password": "${env.CODEARTIFACT_AUTH_TOKEN}"
+              "username": "${{ inputs.JF_USER }}"
+              "password": "${{ inputs.JF_PASSWORD }}"
             },
             {
               "id": "rkc-hosted-releases",
-              "username": "aws",
-              "password": "${env.CODEARTIFACT_AUTH_TOKEN}"
+              "username": "${{ inputs.JF_USER }}"
+              "password": "${{ inputs.JF_PASSWORD }}"
             }
           ]
