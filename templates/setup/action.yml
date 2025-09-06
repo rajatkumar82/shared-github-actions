@@ -90,12 +90,12 @@ runs:
           [
             {
               "id": "rkc-hosted-snapshots",
-              "username": "${{ inputs.JF_USER }}"
+              "username": "${{ inputs.JF_USER }}",
               "password": "${{ inputs.JF_PASSWORD }}"
             },
             {
               "id": "rkc-hosted-releases",
-              "username": "${{ inputs.JF_USER }}"
+              "username": "${{ inputs.JF_USER }}",
               "password": "${{ inputs.JF_PASSWORD }}"
             }
           ]
