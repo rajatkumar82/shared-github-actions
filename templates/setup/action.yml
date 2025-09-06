@@ -40,12 +40,20 @@ runs:
       with:
         maven-version: ${{ inputs.maven-version }}
 
-    - name: Download CodeArtifact Auth Token
-      shell: bash
-      run: |
-        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-        echo CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain rkc --domain-owner $AWS_ACCOUNT_ID --query authorizationToken --output text) >> $GITHUB_ENV
-        
+    - name: Connect to Jfrog artifactory
+      uses: jfrog/setup-jfrog-cli@v4
+      env:
+        # JFrog Platform url
+        JF_URL: ${{ vars.JF_URL }} # or 'https://acme.jfrog.io'
+
+        # Basic authentication credentials
+        JF_USER: ${{ secrets.JF_USER }}
+        JF_PASSWORD: ${{ secrets.JF_PASSWORD }}
+        # or
+        # JFrog Platform access token
+        JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+    - run: |
+          jf rt ping
         echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
 
     - name: Generate settings.xml for Maven Builds
@@ -56,7 +64,7 @@ runs:
             {
               "id": "rkc-hosted-releases",
               "name": "rkc-hosted-releases",
-              "url": "https://rkc-129510261302.d.codeartifact.us-east-1.amazonaws.com/maven/hosted-releases",
+              "url": "https://trial9b3ps3.jfrog.io/artifactory/hosted-snapshots-libs-release",
               "releases": {
                 "enabled": "true",
                 "updatePolicy": "never"
@@ -68,7 +76,7 @@ runs:
             {
               "id": "rkc-hosted-snapshots",
               "name": "rkc-hosted-snapshots",
-              "url": "https://rkc-129510261302.d.codeartifact.us-east-1.amazonaws.com/maven/hosted-snapshots",
+              "url": "https://trial9b3ps3.jfrog.io/artifactory/hosted-snapshots-libs-snapshot",
               "releases": {
                 "enabled": "false",
                 "updatePolicy": "never"
