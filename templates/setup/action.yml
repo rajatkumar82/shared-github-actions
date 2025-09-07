@@ -42,6 +42,7 @@ runs:
 
 
     - name: Set JFrog Basic Auth Header
+      shell: bash
       run: |
         echo "JFROG_AUTH_HEADER=$(echo -n '${{ inputs.JF_USER }}:${{ inputs.JF_PASSWORD }}' | base64)" >> $GITHUB_ENV
 
