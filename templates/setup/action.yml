@@ -47,6 +47,7 @@ runs:
         echo "JFROG_AUTH_HEADER=$(echo -n '${{ inputs.JF_USER }}:${{ inputs.JF_PASSWORD }}' | base64)" >> $GITHUB_ENV
 
     - name: Generate settings.xml with HTTP Header Auth
+      shell: bash
       run: |
         mkdir -p ~/.m2
         cat > ~/.m2/settings.xml <<EOF
