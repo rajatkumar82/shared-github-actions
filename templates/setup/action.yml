@@ -40,46 +40,82 @@ runs:
       with:
         maven-version: ${{ inputs.maven-version }}
 
-    - name: Generate settings.xml for Maven Builds
-      uses: whelk-io/maven-settings-xml-action@v22
-      with:
-        repositories: >
-          [
-            {
-              "id": "rkc-hosted-releases",
-              "name": "rkc-hosted-releases",
-              "url": "https://trial9b3ps3.jfrog.io/artifactory/hosted-snapshots-libs-release",
-              "releases": {
-                "enabled": "true",
-                "updatePolicy": "never"
-              },
-              "snapshots": {
-                "enabled": "false"
-              }
-            },
-            {
-              "id": "rkc-hosted-snapshots",
-              "name": "rkc-hosted-snapshots",
-              "url": "https://trial9b3ps3.jfrog.io/artifactory/hosted-snapshots-libs-snapshot",
-              "releases": {
-                "enabled": "false",
-                "updatePolicy": "never"
-              },
-              "snapshots": {
-                "enabled": "true"
-              }
-            }
-          ]
-        servers: >
-          [
-            {
-              "id": "rkc-hosted-snapshots",
-              "username": "${ inputs.JF_USER }",
-              "password": "${ inputs.JF_PASSWORD }"
-            },
-            {
-              "id": "rkc-hosted-releases",
-              "username": "${ inputs.JF_USER }",
-              "password": "${ inputs.JF_PASSWORD }"
-            }
-          ]
+
+    - name: Set JFrog Basic Auth Header
+      run:
+        echo "JFROG_AUTH_HEADER=$(echo -n '${{ secrets.JFROG_USER }}:${{ secrets.JFROG_PASSWORD }}' | base64)" >> $GITHUB_ENV
+
+    - name: Generate settings.xml with HTTP Header Auth
+      run: |
+        mkdir -p ~/.m2
+        cat > ~/.m2/settings.xml <<EOF
+        <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+          <servers>
+            <server>
+              <id>rkc-hosted-snapshots</id>
+              <configuration>
+                <httpHeaders>
+                  <property>
+                    <name>Authorization</name>
+                    <value>Basic ${JFROG_AUTH_HEADER}</value>
+                  </property>
+                </httpHeaders>
+              </configuration>
+            </server>
+            <server>
+              <id>rkc-hosted-releases</id>
+              <configuration>
+                <httpHeaders>
+                  <property>
+                    <name>Authorization</name>
+                    <value>Basicconfiguration>
+            </server>
+          </servers>
+        </settings>
+        EOF
+
+#    - name: Generate settings.xml for Maven Builds
+#      uses: whelk-io/maven-settings-xml-action@v22
+#      with:
+#        repositories: >
+#          [
+#            {
+#              "id": "rkc-hosted-releases",
+#              "name": "rkc-hosted-releases",
+#              "url": "https://trial9b3ps3.jfrog.io/artifactory/hosted-snapshots-libs-release",
+#              "releases": {
+#                "enabled": "true",
+#                "updatePolicy": "never"
+#              },
+#              "snapshots": {
+#                "enabled": "false"
+#              }
+#            },
+#            {
+#              "id": "rkc-hosted-snapshots",
+#              "name": "rkc-hosted-snapshots",
+#              "url": "https://trial9b3ps3.jfrog.io/artifactory/hosted-snapshots-libs-snapshot",
+#              "releases": {
+#                "enabled": "false",
+#                "updatePolicy": "never"
+#              },
+#              "snapshots": {
+#                "enabled": "true"
+#              }
+#            }
+#          ]
+#        servers: >
+#          [
+#            {
+#              "id": "rkc-hosted-snapshots",
+#              "username": "${ inputs.JF_USER }",
+#              "password": "${ inputs.JF_PASSWORD }"
+#            },
+#            {
+#              "id": "rkc-hosted-releases",
+#              "username": "${ inputs.JF_USER }",
+#              "password": "${ inputs.JF_PASSWORD }"
+#            }
+#          ]
